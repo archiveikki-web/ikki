@@ -11,7 +11,7 @@
    · 출처: @ikki_archive 프로필·게시물 캡션 (2026-10-04 확인)
    ===================================================================== */
 const CONFIG = {
-  notice: "WeThru가 만든 제안 시안입니다. 공식 사이트가 아닙니다.",   // 공개 URL엔 필수, 정식 오픈 때 ""
+  notice: "",   // 공개 URL엔 필수, 정식 오픈 때 ""
   title: "ikki archive | 부산 실내조경, 이끼정원, 행잉 작품",
   bizName: "ikki archive",
   phone: "010-9481-6769",
@@ -92,7 +92,7 @@ const CONFIG = {
   bizInfo: { owner: "", regNo: "" },
 
   en: {
-    notice: "Proposal draft by WeThru, not the official site.",
+    notice: "",
     title: "ikki archive | Indoor landscaping, moss gardens and hanging installations in Busan",
     area: "Busan, South Gyeongsang, Ulsan",
     hero: {
@@ -178,8 +178,8 @@ const FONTS = {
 <meta name="theme-color" content="#0B0E0A">
 <title>ikki archive | 부산 실내조경, 이끼정원, 행잉 작품</title>
 <meta property="og:title" content="ikki archive">
-<meta property="og:description" content="부산 실내조경, 이끼정원, 행잉 작품. WeThru 제안 시안">
-<meta property="og:image" content="https://ceoys.github.io/wethru/interior/ikki-archive/assets/og.jpg">
+<meta property="og:description" content="부산 실내조경, 이끼정원, 행잉 작품">
+<meta property="og:image" content="https://ikkiarchive.com/assets/og.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230B0E0A'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' text-anchor='middle' fill='%23ECE9E1'%3Ei%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -601,7 +601,7 @@ const UI = {
     fBody: '내용', fBodyPh: '원하는 분위기, 일정, 예산을 편하게 적어 주세요.',
     consent: '상담 연락을 위해 이름과 연락처를 받는 데 동의합니다.', submit: '상담 신청하기',
     errName: '이름을 입력해 주세요.', errPhone: '연락처를 입력해 주세요.', errConsent: '개인정보 수집에 동의해 주세요.',
-    toast: '시안 화면이라 실제로 접수되지는 않습니다. 정식 오픈 뒤에는 상담 신청이 사장님 휴대폰 문자로 바로 갑니다.',
+    toast: '상담 신청이 접수되었습니다. 확인 후 연락드리겠습니다.', sendErr: '전송 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
     zoom: ' 사진 크게 보기', post: '인스타그램 게시물', openPost: '인스타그램에서 보기', by: '사진 ', newTab: ' (새 창)',
     lb: '사진 크게 보기', prev: '이전 사진', next: '다음 사진', close: '닫기', pieceAria: ' 행잉 작품',
     rName: '상호', rOwner: '대표', rReg: '사업자등록번호', rPhone: '전화', rInsta: '인스타그램', rArea: '작업 지역',
@@ -618,7 +618,7 @@ const UI = {
     fBody: 'Details', fBodyPh: 'The look you want, timing, budget. Whatever you have so far.',
     consent: 'I agree to share my name and phone number so you can get back to me.', submit: 'Send request',
     errName: 'Please enter your name.', errPhone: 'Please enter a phone number.', errConsent: 'Please agree to the data collection.',
-    toast: 'This is a draft, so nothing is sent. Once the site is live, requests go straight to the owner’s phone as a text.',
+    toast: 'Your consultation request has been sent. We’ll get back to you soon.', sendErr: 'Something went wrong while sending. Please try again in a moment.',
     zoom: ', view larger', post: 'Instagram post', openPost: 'View on Instagram', by: 'Photo: ', newTab: ' (opens in a new tab)',
     lb: 'Photo viewer', prev: 'Previous photo', next: 'Next photo', close: 'Close', pieceAria: ' hanging installation',
     rName: 'Business', rOwner: 'Owner', rReg: 'Business reg. no.', rPhone: 'Phone', rInsta: 'Instagram', rArea: 'Area',
@@ -795,14 +795,59 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---- form ---- */
   const form = $('#form'), msg = $('#msg');
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault(); let err = '';
+
     if (!$('#f-name').value.trim()) err = T.errName;
     else if (!/\d{2,}/.test($('#f-phone').value)) err = T.errPhone;
     else if (!$('#f-consent').checked) err = T.errConsent;
-    msg.textContent = err; if (err) return;
-    toast(T.toast);
-    form.reset();
+
+    msg.textContent = err;
+    if (err) return;
+
+    const pickedSpace = $('#chips input:checked');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    const payload = {
+      _subject: '[ikki archive] 새 상담 문의',
+      _template: 'table',
+      _url: 'https://ikkiarchive.com/',
+      name: $('#f-name').value.trim(),
+      phone: $('#f-phone').value.trim(),
+      space: pickedSpace
+        ? (C.spaceTypes[Number(pickedSpace.value)] || '')
+        : '',
+      size: $('#f-size').value.trim(),
+      message: $('#f-body').value.trim(),
+      consent: $('#f-consent').checked ? '동의' : ''
+    };
+
+    submitBtn.disabled = true;
+    msg.textContent = '';
+
+    try {
+      const res = await fetch(
+        'https://formsubmit.co/ajax/archiveikki@gmail.com',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      toast(T.toast);
+      form.reset();
+    } catch (sendError) {
+      console.error(sendError);
+      msg.textContent = T.sendErr;
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
   /* ---- toast + lightbox ---- */
